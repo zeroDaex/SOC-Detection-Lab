@@ -22,4 +22,4 @@ I connected my existing on-prem DC to Sentinel allowing me to demonstrate a hybr
 5. Audit policy: Edited the Default Domain Controllers Policy -> Advanced Audit Policy Configuration -> enabled **Audit Logon** (4624/4625), **Kerberos Service Ticket Operations** (4769), **Kerberos Authentication Service** (4768/4771), all Success + Failure. Ran `gpupdate /force`. Required because the DCR only collects events that auditing actually writes.
 6. Verification: `SecurityEvent | take 10` in workspace Logs returned live events from `WIN-PLG4VMVBU6A.zeroDae.local` — pipeline confirmed end to end.
 
-[Sentinel Logs](https://raw.githubusercontent.com/zeroDaex/SOC-Detection-Lab/main/01-hybrid-ad-to-sentinel-pipeline/Images/Sentinel-Logs.png)
+![Sentinel Logs](https://raw.githubusercontent.com/zeroDaex/SOC-Detection-Lab/main/01-hybrid-ad-to-sentinel-pipeline/Images/Sentinel-Logs.png)
