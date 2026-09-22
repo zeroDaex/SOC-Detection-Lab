@@ -45,10 +45,14 @@ ___
 ### 1. Lab Networking
 
 Both machines run dual NICs: an isolated Internal Network carries domain traffic between the DC and the attacker, while a NAT adapter provides the internet egress that Azure Arc requires. The Internal Network  has no DHCP, so both hosts use static addresses on the `192.168.100.0/24` segment.
-	![[01-vbox-nat-network.png]]
-	Figure 1 - VirtualBox NAT network providing internet egress for the lab
-	![[02-dc-adapters.png]]
-	Figure 2 - DC network adapter configuration (Internal + NAT)
+
+![01-vbox-nat-network.png](Images/01-vbox-nat-network.png)	
+
+- Figure 1 - VirtualBox NAT network providing internet egress for the lab
+
+![02-dc-adapters.png](Images/02-dc-adapters.png)
+
+- Figure 2 - DC network adapter configuration (Internal + NAT)
 
 Domain Controller address (from `ipconfig /all`)
 
@@ -58,25 +62,29 @@ Subnet Mask . . . . . . . . . . . : 255.255.255.0
 DNS Servers . . . . . . . . . . . : 192.168.100.10
 ```
 
-![[03-kali-ip-a.png]]
-	Figure 3 — Kali attacker on the Internal Network (eth0 = 192.168.100.50) with NAT egress (eth1)
+![03-kali-ip-a.png](Images/03-kali-ip-a.png)
+
+- Figure 3 — Kali attacker on the Internal Network (eth0 = 192.168.100.50) with NAT egress (eth1)
 
 ### 2. Domain Controller Health Check 
 
 Verified Active Directory services were healthy before onboarding, using `dcdiag`. All critical tests (Connectivity, Advertising, Replications, NetLogons, Services, KnowsOfRoleHolders) passed
 
-![[04-dcdiag.png]]
-	_Figure 4 — `dcdiag` confirming a healthy domain controller._
+![04-dcdiag.png](Images/04-dcdiag.png)
+
+- Figure 4 — `dcdiag` confirming a healthy domain controller._
 
 ### 3. Onboard the Domain Controller to Azure Arc
 
 Generated the onboarding script in the Azure portal (**Azure Arc → Machines → Add a single server → Generate script**), ran it in an elevated PowerShell session on the DC, and completed the device-login authentication. Azure Arc projects the on-prem server into Azure as a managed resource, which is the prerequisite for installing the Azure Monitor Agent on a non-Azure machine.
 
-![[05-arc-connected.png]]
-	Figure 5 — The on-premises DC registered in Azure Arc with status **Connected**.
+![05-arc-connected.png](Images/05-arc-connected.png)
+
+- Figure 5 — The on-premises DC registered in Azure Arc with status **Connected**.
 
 Local confirmation with `azcmagent show`:
-	![[05-azcmagent-show.png]]
+
+![05-azcmagent-show.png](Images/05-azcmagent-show.png)
 	
 ```powershell
 Resource Name   : WIN-PLG4VMVBU6A
@@ -87,10 +95,14 @@ Agent Status    : Connected
 ### 4. Deploy the Azure Monitor Agent + Data Collection Rule
 
 Installed the **Windows Security Events** solution from the Content Hub, opened the **Windows Security Events via AMA** data connector, and created a Data Collection Rule (`dcr-dc-securityevents`) scoped to the Arc-enabled DC, collecting **All Security Events** into the `law-zerodae` workspace. Adding the DC to the DCR automatically installs the Azure Monitor Agent on the box.
-	![[06-dcr-overview.png]]
-	Figure 6 — DCR chain: `win-plg4vmvbu6a` → Microsoft-SecurityEvent → `law-zerodae`
-	![[07-ama-extension.png]]
-	Figure 7 — AzureMonitorWindowsAgent extension provisioned on the Arc machine.
+
+![06-dcr-overview.png](Images/06-dcr-overview.png)
+
+- Figure 6 — DCR chain: `win-plg4vmvbu6a` → Microsoft-SecurityEvent → `law-zerodae`
+
+![07-ama-extension.png](Images/07-ama-extension.png)
+
+- Figure 7 — AzureMonitorWindowsAgent extension provisioned on the Arc machine.
 
 
 ### 5. Enable Auditing (Group Policy)
@@ -102,25 +114,31 @@ The DCR only collects events that Windows actually writes to the Security log, s
 - **Account Logon → Audit Kerberos Authentication Service** — Success + Failure → _Event IDs 4768 / 4771_
 
 Applied with `gpupdate /force` on the DC.
-	![[12-audit-policy.png]]
-	![[12-audit-policy-kerberos.png]]
-	![[12-audit-policy-logon.png]]
+![12-audit-policy.png](Images/12-audit-policy.png)
+![12-audit-policy-kerberos.png](Images/12-audit-policy-kerberos.png)
+![12-audit-policy-logon.png](Images/12-audit-policy-logon.png)
 	
 
 
 ### 6. Verify Telemetry Reaching Sentinel
 
 Confirmed events were flowing from the DC into the `SecurityEvent` table, and that the agent was reporting via `Heartbeat`.
-	![[08-securityevent-flowing.png]]
-		Figure 8 — Windows Security events from `WIN-PLG4VMVBU6A` landing in Sentinel.
-	![[09-heartbeat.png]]
-	Figure 9 — A current `Heartbeat` from the DC confirms the pipeline is live.
+![08-securityevent-flowing.png](Images/08-securityevent-flowing.png)
+
+- Figure 8 — Windows Security events from `WIN-PLG4VMVBU6A` landing in Sentinel.
+
+![09-heartbeat.png](Images/09-heartbeat.png)
+
+- Figure 9 — A current `Heartbeat` from the DC confirms the pipeline is live.
 
 ### 7. Attack Simulation — Password Spray (Kali)
 
 Created six disposable domain accounts as targets, then ran a **password spray** with NetExec — one incorrect password tried against all six accounts. Spraying (one password × many users) generates a burst of failed logons from a single source without exceeding the 3-attempt account-lockout threshold on any individual account.
-	![[13-nxc-spray.png]]
-	Figure 10 — NetExec spray output showing the six `[-]` failed authentications.
+
+![13-nxc-spray.png](Images/13-nxc-spray.png)
+
+- Figure 10 — NetExec spray output showing the six `[-]` failed authentications.
+
 ```bash
 # Target list
 echo -e "sprayuser1\nsprayuser2\nsprayuser3\nsprayuser4\nsprayuser5\nsprayuser6" > users.txt
@@ -131,9 +149,11 @@ nxc smb 192.168.100.10 -u users.txt -p 'Wrong-Password-123!' -d zeroDae.local --
 ### 8. Attack Telemetry in Sentinel
 
 The six failed logons appeared in the `SecurityEvent` table within seconds, each stamped with the attacker's source IP (`192.168.100.50`) and **LogonType 3** (network / SMB) — the fingerprint of a remote credential attack.
-	![[10-4625-events.png]]
-	![[10-4625-events-2.png]]
-	Figure 10 — Six 4625 failed-logon events for `sprayuser1–6`, all sourced from 192.168.100.50
+
+![10-4625-events.png](Images/10-4625-events.png)
+![10-4625-events-2.png](Images/10-4625-events-2.png)
+
+- Figure 11 — Six 4625 failed-logon events for `sprayuser1–6`, all sourced from 192.168.100.50
 	
 ```kql
 SecurityEvent
@@ -147,8 +167,11 @@ SecurityEvent
 
 Aggregated the failed logons per source IP and thresholded on volume — the core of a brute-force / password-spray detection.
 **Result:** a single detection row — `IpAddress 192.168.100.50`, `FailedAttempts 6`, with all six targeted accounts enumerated.
-	![[11-detection-query.png]]
-	Figure 11 — The detection query fires on the simulated attack: 6 failed attempts from one IP against six accounts
+
+![11-detection-query.png](Images/11-detection-query.png)
+
+- Figure 12 — The detection query fires on the simulated attack: 6 failed attempts from one IP against six accounts
+
 ```kql
 SecurityEvent
 | where EventID == 4625
