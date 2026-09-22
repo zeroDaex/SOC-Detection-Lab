@@ -4,7 +4,6 @@
 **Date:** September 2026
 **MITRE ATT&CK:** T1558.003 — Credential Access → Kerberoasting
 
----
 
 ## Objective
 
@@ -12,7 +11,6 @@ Demonstrate the full kerberoasting kill chain against an on-premises Active Dire
 
 This builds directly on the on-prem DC → Azure Arc → AMA → Sentinel pipeline established in the previous project; that telemetry path (including the `Audit Kerberos Service Ticket Operations` policy, Event ID 4769) is already live.
 
----
 
 ## Why Kerberoasting Matters
 
@@ -20,7 +18,6 @@ Kerberoasting abuses a legitimate feature of Kerberos rather than a bug: any aut
 
 **Detection signal:** modern AD uses AES encryption (`0x12` / `0x11`) for Kerberos tickets by default. Attacker tools (Impacket, Rubeus, NetExec) request tickets as **RC4 (`0x17`)** because RC4 is far easier to crack. A 4769 event with **encryption type `0x17`** targeting a **user-account SPN** (not a machine account ending in `$`) is therefore a high-fidelity indicator.
 
----
 
 ## Environment
 
@@ -31,12 +28,12 @@ Kerberoasting abuses a legitimate feature of Kerberos rather than a bug: any aut
 | SIEM | Microsoft Sentinel · Log Analytics `law-zerodae` |
 | Target | `svc_sql` — user account with SPN `MSSQLSvc/sql.zeroDae.local:1433` |
 
----
 
 ## 1. Create a Kerberoastable Service Account
 
 An SPN registered to a normal user account with a crackable password *is* the vulnerability. On the DC (admin PowerShell):
-![[kerb-01-setspn.png.png]]
+
+![kerb-01-setspn.png.png](Images/kerb-01-setspn.png.png)
 
 ```powershell
 New-ADUser -Name "svc_sql" -SamAccountName "svc_sql" `
@@ -47,19 +44,19 @@ setspn -S MSSQLSvc/sql.zeroDae.local:1433 svc_sql
 ```
 
 Confirm the SPN registered:
-![[kerb-02-setspn.png.png]]
+
+![kerb-02-setspn.png.png](Images/kerb-02-setspn.png.png)
 
 ```powershell
 setspn -L svc_sql
 ```
 
----
 
 ## 2. Kerberoast from Kali
 
 Using a valid domain credential, request the SPN account's TGS ticket. Impacket queries LDAP for SPN-bearing accounts, requests their tickets (as RC4 by default), and dumps the crackable hashes:
 
-![[kerb-03-getuserspns.png.png]]
+![kerb-03-getuserspns.png.png](Images/kerb-03-getuserspns.png.png)
 
 ```bash
 impacket-GetUserSPNs zeroDae.local/<validuser>:'<password>' -dc-ip 192.168.100.10 -request -outputfile kerb_hashes.txt
@@ -67,7 +64,6 @@ impacket-GetUserSPNs zeroDae.local/<validuser>:'<password>' -dc-ip 192.168.100.1
 
 The output includes the `svc_sql` account and its `$krb5tgs$23$...` hash (mode 23 = RC4).
 
----
 
 ## 3. Detection in Sentinel
 
@@ -88,13 +84,9 @@ SecurityEvent
 
 **Result:** a single detection row — `SvcName = svc_sql`, `EncType = 0x17` — the RC4 service-ticket request that betrays the roast.
 
-![[kerb-04-detection-query.png.png]]
-
-*Figure — The kerberoast detected in Sentinel: an RC4 (0x17) service-ticket request for the `svc_sql` SPN account.*
+![kerb-04-detection-query.png.png](Images/kerb-04-detection-query.png.png)
 
 **Analysis note:** in this run the requesting account also appears as `svc_sql`, because the attack was authenticated using that account's own domain credentials. In a real intrusion the requestor would be whatever low-privileged account the attacker had compromised — which is why the detection keys on the **service being targeted (`ServiceName`) + RC4**, not on the requestor, so it fires regardless of which account launched it.
-
----
 
 ## 4. Scheduled Analytics Rule
 
@@ -112,12 +104,10 @@ Deployed the parsed detection as a scheduled analytics rule so it raises inciden
 
 The `SvcName !endswith "$" and SvcName != "krbtgt"` filter restricts alerts to **user-account SPNs** — the real roast targets — excluding machine accounts and krbtgt from normal Kerberos traffic.
 
-![[kerb-04-analytics-rule.png.png]]
-![[kerb-05-analytics-rule.png.png]]
-![[kerb-06-analytics-rule.png.png]]
+![kerb-04-analytics-rule.png.png](Images/kerb-04-analytics-rule.png.png)
+![kerb-05-analytics-rule.png.png](Images/kerb-05-analytics-rule.png.png)
+![kerb-06-analytics-rule.png.png](Images/kerb-06-analytics-rule.png.png)
 
-
----
 
 ## 5. Impact — Offline Hash Cracking
 
@@ -130,18 +120,14 @@ hashcat -m 13100 kerb_hashes.txt --show     # display recovered plaintext
 
 Recovered: `svc_sql : Summer2024!`
 
-> [!note] Method note
-> The wordlist was seeded with the lab password to confirm the end-to-end recovery path (hash → plaintext). This demonstrates that a kerberoasted TGS hash is crackable offline; it is not a claim about the password's real-world guessability.
+![kerb-07-hashcat.png.png](Images/kerb-07-hashcat.png.png)
 
-![[kerb-07-hashcat.png.png]]
-
----
 
 ## 6. Detection Upgrade — SPN Honeypot
 
 A decoy account with an SPN for a non-existent service. No legitimate client ever requests it, so **any** 4769 for its SPN is malicious — a zero-false-positive detection.
 
-![[kerb-08-SPN honeypot.png.png]]
+![kerb-08-SPN honeypot.png.png](Images/kerb-08-SPN-honeypot.png.png)
 
 ```powershell
 New-ADUser -Name "svc_backup_hp" -SamAccountName "svc_backup_hp" `
@@ -151,7 +137,7 @@ setspn -S BACKUP/hp.zeroDae.local:9999 svc_backup_hp
 
 Companion analytics rule (Severity: **Critical**):
 
-![[kerb-09-analytics-rule.png.png]]
+![kerb-09-analytics-rule.png.png](Images/kerb-09-analytics-rule.png.png)
 
 ```kql
 SecurityEvent
@@ -160,13 +146,11 @@ SecurityEvent
 | where SvcName == "svc_backup_hp"
 ```
 
----
 
 ## Detection Tuning Note
 
 The `0x17` filter is high-fidelity in an AES-default environment, but some legacy applications legitimately use RC4 — so in production this rule would be paired with **volume-anomaly detection** (one account requesting many distinct SPNs in a short window) and the **SPN honeypot** above to keep false positives near zero.
 
----
 
 ## Skills Demonstrated
 
