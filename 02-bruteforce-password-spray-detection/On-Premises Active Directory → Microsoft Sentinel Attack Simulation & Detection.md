@@ -14,7 +14,7 @@ Build a Hybrid SOC detection pipeline that streams Windows Security telemetry fr
 
 The value of this build is that the domain controller stays **on-premise** and is projected into the cloud SIEM via Azure Arc — a hybrid pattern that mirrors how most real enterprises actually monitor legacy infrastructure, rather than running everything natively in Azure.
 
-___
+
 ## Architecture 
 
 ```plain text
@@ -32,7 +32,7 @@ Log Analytics Workspace — law-zerodae
 Microsoft Sentinel — KQL analytics rule → Incident
 ```
 
-___
+
 ## Environment
 
 | Component         | Detail                                                                                    |
@@ -48,11 +48,9 @@ Both machines run dual NICs: an isolated Internal Network carries domain traffic
 
 ![01-vbox-nat-network.png](Images/01-vbox-nat-network.png)	
 
-- Figure 1 - VirtualBox NAT network providing internet egress for the lab
 
 ![02-dc-adapters.png](Images/02-dc-adapters.png)
 
-- Figure 2 - DC network adapter configuration (Internal + NAT)
 
 Domain Controller address (from `ipconfig /all`)
 
@@ -64,7 +62,6 @@ DNS Servers . . . . . . . . . . . : 192.168.100.10
 
 ![03-kali-ip-a.png](Images/03-kali-ip-a.png)
 
-- Figure 3 — Kali attacker on the Internal Network (eth0 = 192.168.100.50) with NAT egress (eth1)
 
 ### 2. Domain Controller Health Check 
 
@@ -72,7 +69,6 @@ Verified Active Directory services were healthy before onboarding, using `dcdiag
 
 ![04-dcdiag.png](Images/04-dcdiag.png)
 
-- Figure 4 — `dcdiag` confirming a healthy domain controller._
 
 ### 3. Onboard the Domain Controller to Azure Arc
 
@@ -80,7 +76,6 @@ Generated the onboarding script in the Azure portal (**Azure Arc → Machines �
 
 ![05-arc-connected.png](Images/05-arc-connected.png)
 
-- Figure 5 — The on-premises DC registered in Azure Arc with status **Connected**.
 
 Local confirmation with `azcmagent show`:
 
@@ -98,11 +93,9 @@ Installed the **Windows Security Events** solution from the Content Hub, opened 
 
 ![06-dcr-overview.png](Images/06-dcr-overview.png)
 
-- Figure 6 — DCR chain: `win-plg4vmvbu6a` → Microsoft-SecurityEvent → `law-zerodae`
 
 ![07-ama-extension.png](Images/07-ama-extension.png)
 
-- Figure 7 — AzureMonitorWindowsAgent extension provisioned on the Arc machine.
 
 
 ### 5. Enable Auditing (Group Policy)
@@ -125,11 +118,9 @@ Applied with `gpupdate /force` on the DC.
 Confirmed events were flowing from the DC into the `SecurityEvent` table, and that the agent was reporting via `Heartbeat`.
 ![08-securityevent-flowing.png](Images/08-securityevent-flowing.png)
 
-- Figure 8 — Windows Security events from `WIN-PLG4VMVBU6A` landing in Sentinel.
 
 ![09-heartbeat.png](Images/09-heartbeat.png)
 
-- Figure 9 — A current `Heartbeat` from the DC confirms the pipeline is live.
 
 ### 7. Attack Simulation — Password Spray (Kali)
 
@@ -137,7 +128,6 @@ Created six disposable domain accounts as targets, then ran a **password spray**
 
 ![13-nxc-spray.png](Images/13-nxc-spray.png)
 
-- Figure 10 — NetExec spray output showing the six `[-]` failed authentications.
 
 ```bash
 # Target list
@@ -152,8 +142,6 @@ The six failed logons appeared in the `SecurityEvent` table within seconds, each
 
 ![10-4625-events.png](Images/10-4625-events.png)
 ![10-4625-events-2.png](Images/10-4625-events-2.png)
-
-- Figure 11 — Six 4625 failed-logon events for `sprayuser1–6`, all sourced from 192.168.100.50
 	
 ```kql
 SecurityEvent
@@ -169,8 +157,6 @@ Aggregated the failed logons per source IP and thresholded on volume — the cor
 **Result:** a single detection row — `IpAddress 192.168.100.50`, `FailedAttempts 6`, with all six targeted accounts enumerated.
 
 ![11-detection-query.png](Images/11-detection-query.png)
-
-- Figure 12 — The detection query fires on the simulated attack: 6 failed attempts from one IP against six accounts
 
 ```kql
 SecurityEvent
