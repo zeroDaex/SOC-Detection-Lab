@@ -8,11 +8,11 @@ The theme of this lab is that each detection is credible because the attack behi
 ## Architecture  
 
 ```plain text
-┌─────────────────┐        ┌──────────────────────────────┐
-│  Kali (attacker)│        │  Windows Server 2022 DC       │
-│  192.168.100.50 │──SMB──▶│  zeroDae.local (192.168.100.10)│
-│  Impacket/NetExec│  LDAP  │  Security Event Log            │
-└─────────────────┘        └──────────────┬───────────────┘
+┌─────────────────┐         ┌──────────────────────────────┐
+│  Kali (attacker)│         │  Windows Server 2022 DC      │
+│  192.168.100.50 │──SMB──▶|  zeroDae.local(192.168.100.10)│
+│ Impacket/NetExec│  LDAP   |  Security Event Log          │
+└─────────────────┘         └──────────────┬───────────────┘
                                           │ Azure Arc + Azure Monitor Agent
                                           │ Data Collection Rule
                                           ▼
