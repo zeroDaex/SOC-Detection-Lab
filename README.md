@@ -13,9 +13,9 @@ The theme of this lab is that each detection is credible because the attack behi
 │  192.168.100.50 │──SMB──▶|  zeroDae.local(192.168.100.10)│
 │ Impacket/NetExec│  LDAP   |  Security Event Log          │
 └─────────────────┘         └──────────────┬───────────────┘
-                                          │ Azure Arc + Azure Monitor Agent
-                                          │ Data Collection Rule
-                                          ▼
+                                           │ Azure Arc + Azure Monitor Agent
+                                           │ Data Collection Rule
+                                           ▼
                            ┌──────────────────────────────┐
                            │  Log Analytics (law-zerodae)  │
                            │  Microsoft Sentinel           │
