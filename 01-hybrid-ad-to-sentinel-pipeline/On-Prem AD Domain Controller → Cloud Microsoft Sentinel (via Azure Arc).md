@@ -28,10 +28,11 @@ I connected my existing on-prem DC to Sentinel allowing me to demonstrate a hybr
 ### 1. Networking for Arc
 
 - Both machines run dual NICs: an isolated Internal Network carries domain traffic between the DC and the attacker, while a NAT adapter provides the internet egress that Azure Arc requires. The Internal Network  has no DHCP, so both hosts use static addresses on the `192.168.100.0/24` segment.
-	![[01-vbox-nat-network.png]]
-	Figure 1 - VirtualBox NAT network providing internet egress for the lab
-	![[02-dc-adapters.png]]
-	Figure 2 - DC network adapter configuration (Internal + NAT)
+
+![01-vbox-nat-network.png](Images/01-vbox-nat-network.png)
+
+![02-dc-adapters.png](Images/02-dc-adapters.png)
+
 
 - Domain Controller address (from `ipconfig /all`)
 
@@ -41,22 +42,21 @@ Subnet Mask . . . . . . . . . . . : 255.255.255.0
 DNS Servers . . . . . . . . . . . : 192.168.100.10
 ```
 
-![[03-kali-ip-a.png]]
-	Figure 3 — Kali attacker on the Internal Network (eth0 = 192.168.100.50) with NAT egress (eth1)
+![03-kali-ip-a.png](Images/03-kali-ip-a.png)
+
 
 ### 2. Domain Controller Health Check 
 
 - Verified Active Directory services were healthy before onboarding, using `dcdiag`. All critical tests (Connectivity, Advertising, Replications, NetLogons, Services, KnowsOfRoleHolders) passed
-	![[04-dcdiag.png]]
-	_Figure 4 — `dcdiag` confirming a healthy domain controller._
+	![04-dcdiag.png](Images/04-dcdiag.png)
 
 ### 3. Onboard the Domain Controller to Azure Arc
 
 - Generated the onboarding script in the Azure portal (**Azure Arc → Machines → Add a single server → Generate script**), ran it in an elevated PowerShell session on the DC, and completed the device-login authentication. 
 - Azure Arc projects the on-prem server into Azure as a managed resource, which is the prerequisite for installing the Azure Monitor Agent on a non-Azure machine.
-	![[arc-onboarding-complete.png]]
-	![[05-arc-connected.png]]
-	Figure 5 — The on-premises DC registered in Azure Arc with status **Connected**.
+
+	![arc-onboarding-complete.png](Images/arc-onboarding-complete.png)
+	![05-arc-connected.png](Images/5-arc-connected.png)
 	
 ```powershell
 ./Onboarding.ps1
@@ -64,7 +64,8 @@ DNS Servers . . . . . . . . . . . : 192.168.100.10
 
 
 Local confirmation with `azcmagent show`:
-	![[05-azcmagent-show.png]]
+	
+![05-azcmagent-show.png](Images/05-azcmagent-show.png)
 	
 ```powershell
 Resource Name   : WIN-PLG4VMVBU6A
@@ -76,10 +77,9 @@ Agent Status    : Connected
 
 - Installed the **Windows Security Events** solution from the Content Hub, opened the **Windows Security Events via AMA** data connector, and created a Data Collection Rule (`dcr-dc-securityevents`) scoped to the Arc-enabled DC, collecting **All Security Events** into the `law-zerodae` workspace. 
 - Adding the DC to the DCR automatically installs the Azure Monitor Agent on the box.
-	![[06-dcr-overview.png]]
-	Figure 6 — DCR chain: `win-plg4vmvbu6a` → Microsoft-SecurityEvent → `law-zerodae`
-	![[07-ama-extension.png]]
-	Figure 7 — AzureMonitorWindowsAgent extension provisioned on the Arc machine.
+
+![06-dcr-overview.png](Images/06-dcr-overview.png)
+![07-ama-extension.png](Images/07-ama-extension.png)
 
 ### 5. Enable Auditing (Group Policy)
 
@@ -89,19 +89,19 @@ Agent Status    : Connected
 	- **Account Logon → Audit Kerberos Authentication Service** — Success + Failure → _Event IDs 4768 / 4771_
 
 Applied with `gpupdate /force` on the DC.
-	![[12-audit-policy.png]]
-	![[12-audit-policy-kerberos.png]]
-	![[12-audit-policy-logon.png]]
+	![12-audit-policy.png](Images/12-audit-policy.png])
+	![12-audit-policy-kerberos.png](Images/12-audit-policy-kerberos.png])
+	![12-audit-policy-logon.png](Images/12-audit-policy-logon.png])
 	
 ### 6. Verify Telemetry Reaching Sentinel
 
 - Confirmed events were flowing from the DC into the `SecurityEvent` table, and that the agent was reporting via `Heartbeat`.
-	![[08-securityevent-flowing.png]]
-		Figure 8 — Windows Security events from `WIN-PLG4VMVBU6A` landing in Sentinel.
-	![[09-heartbeat.png]]
-	Figure 9 — A current `Heartbeat` from the DC confirms the pipeline is live.
 
-___
+	![08-securityevent-flowing.png](Images/08-securityevent-flowing.png)
+
+	![09-heartbeat.png](Images/09-heartbeat.png)
+
+
 ## Conclusion
 
 This completes the first inital steps to my SOC detection lab. Azure sentinel can now monitor all log data coming from the DC machine. What this means is i can now demonstrate purple team exercises simulating what a attack would look like from the attackers POV and the defenders POV and how it relates to real-world SOC environments. 
