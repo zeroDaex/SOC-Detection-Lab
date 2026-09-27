@@ -29,9 +29,9 @@ I connected my existing on-prem DC to Sentinel allowing me to demonstrate a hybr
 
 - Both machines run dual NICs: an isolated Internal Network carries domain traffic between the DC and the attacker, while a NAT adapter provides the internet egress that Azure Arc requires. The Internal Network  has no DHCP, so both hosts use static addresses on the `192.168.100.0/24` segment.
 
-![01-vbox-nat-network.png](Images/01-vbox-nat-network.png)
+	![01-vbox-nat-network.png](Images/01-vbox-nat-network.png)
 
-![02-dc-adapters.png](Images/02-dc-adapters.png)
+	![02-dc-adapters.png](Images/02-dc-adapters.png)
 
 
 - Domain Controller address (from `ipconfig /all`)
@@ -64,8 +64,7 @@ DNS Servers . . . . . . . . . . . : 192.168.100.10
 
 
 Local confirmation with `azcmagent show`:
-	
-![05-azcmagent-show.png](Images/05-azcmagent-show.png)
+	![05-azcmagent-show.png](Images/05-azcmagent-show.png)
 	
 ```powershell
 Resource Name   : WIN-PLG4VMVBU6A
@@ -78,8 +77,8 @@ Agent Status    : Connected
 - Installed the **Windows Security Events** solution from the Content Hub, opened the **Windows Security Events via AMA** data connector, and created a Data Collection Rule (`dcr-dc-securityevents`) scoped to the Arc-enabled DC, collecting **All Security Events** into the `law-zerodae` workspace. 
 - Adding the DC to the DCR automatically installs the Azure Monitor Agent on the box.
 
-![06-dcr-overview.png](Images/06-dcr-overview.png)
-![07-ama-extension.png](Images/07-ama-extension.png)
+	![06-dcr-overview.png](Images/06-dcr-overview.png)
+	![07-ama-extension.png](Images/07-ama-extension.png)
 
 ### 5. Enable Auditing (Group Policy)
 
