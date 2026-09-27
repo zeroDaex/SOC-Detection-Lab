@@ -30,8 +30,9 @@ A single hybrid pipeline underlies every project: the domain controller stays on
 | Project | Technique | MITRE ATT&CK |  Status    |
 | ------- | --------- | ------------ | ---------- |
 | On-Prem AD → Sentinel Pipeline  | Hybrid log ingestion (Arc + AMA + DCR)  |  |  ✅ |
-| Brute-Force / Password-Spray Detection | Password spraying | T1110.003 | ✅ |
+| Brute-Force / Password-Spray Detection | Password spraying | T1110 (.001, and .003) | ✅ |
 | Kerberoasting: Attack, Detection & Cracking | Kerberoasting | T1558.003 | ✅ |
+| RDP Lateral Movement Detection | Lateral Movement | T1021.001 (RDP) · T1078 (Valid Accounts) | Pending|
 
 
 Each project folder contains its own writeup, KQL, and screenshots.
