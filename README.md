@@ -58,6 +58,9 @@ Longer, narrative versions of these builds are published as a series on Medium:
 * [Setting Up Windows Server 2022 with Active Directory (foundation)](https://medium.com/@daemonwork2001)
 * [Deploying a Wazuh SIEM with Sysmon and Windows Event Monitoring (on-prem SIEM track)](https://medium.com/@daemonwork2001)
 * [Microsoft Sentinel - Azure Honeypot Detection Lab](https://zerodaex.github.io/daemondoesIT.github.io/)
+* [Brute-Force / Password-Spray Detection](https://medium.com/@daemonwork2001/detecting-password-spraying-in-microsoft-sentinel-building-the-hybrid-ad-lab-then-catching-the-56a9e1bee790?sharedUserId=daemonwork2001)
+* [Kerberoasting Attack / Detection lab](https://medium.com/@daemonwork2001/kerberoasting-in-a-hybrid-ad-lab-attack-it-detect-it-in-sentinel-then-crack-it-72c6170d0671?sharedUserId=daemonwork2001)
+* [RDP lateral movement Detection](https://medium.com/@daemonwork2001/catching-rdp-lateral-movement-with-one-logon-event-microsoft-sentinel-9d716a98ce07?sharedUserId=daemonwork2001)
 
 
 
