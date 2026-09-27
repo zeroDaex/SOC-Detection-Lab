@@ -4,7 +4,7 @@
 **Date:** September 2026
 **MITRE ATT&CK:** T1021.001 — Lateral Movement → Remote Services: Remote Desktop Protocol · T1078 — Valid Accounts
 
----
+
 
 ## Objective
 
@@ -12,13 +12,13 @@ Demonstrate the full stolen-credential RDP lateral-movement path against an on-p
 
 This builds directly on the on-prem DC → Azure Arc → AMA → Sentinel pipeline established in the earlier projects; that telemetry path (the `Audit Logon` policy, Event IDs 4624 / 4625) is already live, so this project focuses on the attack and the RDP-specific detection.
 
----
+
 
 ## Why RDP Lateral Movement Matters
 
 RDP abuse is *living-off-the-land*: the attacker isn't dropping malware, they're using a valid account and a built-in Windows service (Remote Desktop) the way a real admin would. Once one credential is compromised, RDP turns that credential into a full interactive desktop on the target. Because the traffic and the logon look legitimate, it blends into normal administrative activity, which is exactly what makes it dangerous and why detection has to lean on *context* (who, from where, what logon type) rather than on a signature.
 
----
+
 
 ## Environment
 
@@ -29,7 +29,7 @@ RDP abuse is *living-off-the-land*: the attacker isn't dropping malware, they're
 | SIEM | Microsoft Sentinel · Log Analytics `law-zerodae` |
 | Compromised credential | `Yuji.Itadori` — valid domain user (`test123!`) used as the foothold account |
 
----
+
 
 ## Account Setup
 
@@ -37,8 +37,7 @@ The scenario starts from a single valid domain credential for the user `Yuji.Ita
 
 Set (or confirm) the account used for this run:
 
-![[set-domain-user-password-yuji.png]]
-*Figure 1 — Setting the domain password for the foothold account `Yuji.Itadori`.*
+![set-domain-user-password-yuji.png](Images/set-domain-user-password-yuji.png)
 
 ```powershell
 net user Yuji.Itadori 'test123!' /domain
@@ -46,42 +45,35 @@ net user Yuji.Itadori 'test123!' /domain
 
 Enumerating the domain's user accounts confirms the account exists alongside the rest of the directory:
 
-![[net-user-domain-accounts-list.png]]
-*Figure 2 — `net user` listing the domain accounts on the DC.*
+![net-user-domain-accounts-list.png](Images/net-user-domain-accounts-list.png)
 
 I also pointed my Kali resolver at the DC so domain name resolution works:
+	![kali-resolv-conf-dns.png](Images/kali-resolv-conf-dns.png)
 
-![[kali-resolv-conf-dns.png]]
-*Figure 3 — `/etc/resolv.conf` pointing DNS at the DC (192.168.100.10).*
-
-#### Enable the RDP Path / Grant Logon Rights
+### Enable the RDP Path / Grant Logon Rights
 
 A valid credential alone doesn't grant a remote desktop — the account also needs the **Allow log on through Remote Desktop Services** right, and RDP has to be enabled on the target. This is the step that turns "I have a password" into "I have a session."
 
 - Enable Remote Desktop on the target and add the account to Remote Desktop Users:
-	![[Enabling-RDP.png]]
-	*Figure 4 — Enabling Remote Desktop on the target.*
-	![[Assining-User-RDP.png]]
-	*Figure 5 — Assigning the account Remote Desktop access.*
+	![Enabling-RDP.png](Images/Enabling-RDP.png)
+	![Assining-User-RDP.png](Images/Assining-User-RDP.png)
 
 - Confirm the user right locally (Local Security Policy → User Rights Assignment):
-	![[secpol-allow-logon-through-rdp.png]]
-	*Figure 6 — `secpol.msc` → "Allow log on through Remote Desktop Services" showing Remote Desktop Users.*
-- and at the domain level (Default Domain Controllers Policy):
-	![[gpo-allow-logon-through-rdp-dc.png]]
-	*Figure 7 — The same right set via the Default Domain Controllers GPO.*
+	![secpol-allow-logon-through-rdp.png](Images/secpol-allow-logon-through-rdp.png)
 
----
+- and at the domain level (Default Domain Controllers Policy):
+	![gpo-allow-logon-through-rdp-dc.png](Images/gpo-allow-logon-through-rdp-dc.png)
+
+
 
 ## Attack Chain
 
-#### Service Validation
+### Service Validation
 
 Before exploiting any services, it's usually best to validate the credential and enumerate domain users with NetExec:
 
 - This gives an attacker a better look at how the domain is built, mapping out its infrastructure.
-	![[nxc-smb-user-enum.png]]
-	*Figure 8 — NetExec authenticates as `Yuji.Itadori` and enumerates 19 domain users (`--users`).*
+	![nxc-smb-user-enum.png](Images/nxc-smb-user-enum.png)
 
 ```bash
 # Validate the credential
@@ -93,8 +85,7 @@ nxc smb 192.168.100.10 -u Yuji.Itadori -p 'test123!' -d zeroDae.local --users
 
 Enumerate the available shares:
 
-![[nxc-smb-shares-enum-dup.png]]
-*Figure 9 — NetExec share enumeration (`--shares`): READ on IPC$, NETLOGON, SYSVOL.*
+![nxc-smb-shares-enum-dup.png](Images/nxc-smb-shares-enum-dup.png)
 
 ```bash
 nxc smb 192.168.100.10 -u Yuji.Itadori -p 'test123!' -d zeroDae.local --shares
@@ -102,19 +93,17 @@ nxc smb 192.168.100.10 -u Yuji.Itadori -p 'test123!' -d zeroDae.local --shares
 
 In this scenario the attacker could not find any key data in the SMB shares; however, that is not the only service available. Using NetExec's `rdp` module, the attacker verifies the compromised user can RDP into the DC:
 
-![[nxc-rdp-validation.png]]
-*Figure 10 — NetExec `rdp` module confirming `Yuji.Itadori` can authenticate over RDP to the DC.*
+![nxc-rdp-validation.png](Images/nxc-rdp-validation.png)
 
 ```bash
 nxc rdp 192.168.100.10 -u Yuji.Itadori -p 'test123!' -d zeroDae.local
 ```
 
-#### RDP Logon from Kali
+### RDP Logon from Kali
 
 Using the `xfreerdp3` client, the attacker can remotely log in to the machine as the user `Yuji.Itadori`. This is critical in a SOC / enterprise environment: an outsider now has an interactive session on the domain controller itself.
 
-![[xfreerdp-rdp-session-dc.png]]
-*Figure 11 — `xfreerdp3` session to the DC as `Yuji.Itadori` — full interactive desktop on Windows Server 2022.*
+![xfreerdp-rdp-session-dc.png](Images/xfreerdp-rdp-session-dc.png)
 
 ```bash
 xfreerdp3 /v:192.168.100.10 /u:Yuji.Itadori /p:'test123!' /d:zeroDae.local /cert:ignore
@@ -126,14 +115,13 @@ xfreerdp3 /v:192.168.100.10 /u:Yuji.Itadori /p:'test123!' /d:zeroDae.local /cert
 - Defenders can add specific conditions to a detection rule that key on the remote source IP of the logon. Any external IPs outside the organization can be flagged for further review.
 - Excluding Privileged Access Workstations (PAWs) removes the expected admin-RDP noise so the real signal stands out.
 
----
+
 
 ## Attack Telemetry in Sentinel
 
 The attacker's logon was captured and flagged with the detection query below. The RDP logon lands in the `SecurityEvent` table as a **4624 / LogonType 10** event, stamped with the attacker's source IP (`192.168.100.50`).
 
-![[rdp-detection-query.png]]
-*Figure 12 — The RemoteInteractive logon in Sentinel.*
+![rdp-detection-query.png](Images/rdp-detection-query.png)
 
 ```kql
 // RDP successful-logon hunting query
@@ -151,7 +139,7 @@ SecurityEvent
 | order by TimeGenerated desc
 ```
 
----
+
 
 ## Scheduled Analytics Rule
 
@@ -171,11 +159,9 @@ Deploy the detection as a scheduled analytics rule so it raises MITRE-mapped inc
 
 The Name, Description, Severity, and MITRE ATT&CK mapping describe the action/function of the rule. This particular rule is modeled after RDP lateral movement via a Remote Interactive logon for a valid domain account (T1078).
 
-![[rdp-rule-general.png]]
-*Figure 13 — Analytics rule General tab: name, description, and severity.*
+![rdp-rule-general.png](Images/rdp-rule-general.png)
 
-![[rdp-rule-mitre-mapping.png]]
-*Figure 14 — MITRE ATT&CK mapping: Lateral Movement → T1021.001 (RDP) · T1078 (Valid Accounts).*
+![rdp-rule-mitre-mapping.png](Images/rdp-rule-mitre-mapping.png)
 
 ### Rule Setup Logic
 
@@ -183,15 +169,13 @@ The Name, Description, Severity, and MITRE ATT&CK mapping describe the action/fu
 
 - I linked the `Account`, `IP`, and `Host` fields so Sentinel surfaces the specific data needed to get the full picture.
 - This benefits the SOC in many ways — automatically linking related alerts and tracking threats across the network.
-	![[rdp-rule-logic-entity-mapping.png]]
-	*Figure 15 — Entity mapping: Account, Host, and IP.*
+	![rdp-rule-logic-entity-mapping.png](Images/rdp-rule-logic-entity-mapping.png)
 
 #### Query Breakdown
 
 From the DC's logs, this scheduled analytics rule filters for successful RDP logons from a real remote source, dropping anything coming from a trusted admin workstation (by name or IP), and surfacing untrusted/foreign IP addresses (192.168.100.50):
 
-![[rdp-rule-query-results.png]]
-*Figure 16 — Rule query results: the RemoteInteractive logon from the untrusted source IP.*
+![rdp-rule-query-results.png](Images/rdp-rule-query-results.png)
 
 ```kql
 let PAW_Hosts = dynamic(["PAW01","ADMIN-WKS01"]);   // known Privileged Access Workstation hostnames (allowlist)
@@ -219,10 +203,9 @@ SecurityEvent
 
 - For this environment we set the rule to run automatically every **5 minutes** against the log data matched by the **rule query**.
 - This is the core function of the feature: it creates an autonomous process that supports 24-hour monitoring in real-world SOC environments.
-	![[rdp-rule-query-scheduling.png]]
-	*Figure 17 — Query scheduling: run every 5 minutes, 1-hour lookback.*
+	![rdp-rule-query-scheduling.png](Images/rdp-rule-query-scheduling.png)
 
----
+
 
 ## Skills Demonstrated
 
@@ -232,4 +215,4 @@ SecurityEvent
 - **Full attack lifecycle** — credential foothold → enumeration → RDP session → SIEM detection → incident
 - **MITRE ATT&CK mapping** — classifying the detection as T1021.001 (RDP) and T1078 (Valid Accounts)
 
----
+
