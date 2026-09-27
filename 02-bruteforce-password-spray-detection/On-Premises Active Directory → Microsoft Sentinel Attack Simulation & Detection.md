@@ -14,7 +14,7 @@ Build a hybrid SOC detection pipeline that streams Windows Security telemetry fr
 
 The value of this build is that the domain controller stays **on-premises** and is projected into the cloud SIEM via Azure Arc — a hybrid pattern that mirrors how most real enterprises actually monitor legacy infrastructure, rather than running everything natively in Azure.
 
-___
+
 ## Architecture 
 
 ```plain text
@@ -32,10 +32,10 @@ Log Analytics Workspace — law-zerodae
 Microsoft Sentinel — KQL analytics rule → Incident
 ```
 
-___
+
 # Attack Simulation — Password Spray and Password Guessing
 
-## Spray vs. Guessing
+### Spray vs. Guessing
 
 Password spraying and password guessing are cousins that fall under the same MITRE ATT&CK mapping of Credential Access → T1110 (Brute Force).
 
@@ -46,7 +46,7 @@ Password spraying and password guessing are cousins that fall under the same MIT
 ### Password Spraying - T1110.003
 
 I created six disposable domain accounts as targets, then ran a **password spray** with NetExec — one incorrect password tried against all six accounts. Spraying (one password × many users) generates a burst of failed logons from a single source without exceeding the 3-attempt account-lockout threshold on any individual account.
-	![[13-nxc-spray.png]]
+	![13-nxc-spray.png](Images/13-nxc-spray.png)
 	
 ```bash
 # Target list
@@ -59,9 +59,8 @@ nxc smb 192.168.100.10 -u users.txt -p 'Wrong-Password-123!' -d zeroDae.local --
 ## Attack Telemetry in Sentinel
 
 The six failed logons appeared in the `SecurityEvent` table within seconds, each stamped with the attacker's source IP (`192.168.100.50`) and **LogonType 3** (network / SMB) — the fingerprint of a remote credential attack.
-	![[10-4625-events.png]]
-	![[10-4625-events-2.png]]
-	Figure 10 — Six 4625 failed-logon events for `sprayuser1–6`, all sourced from 192.168.100.50.
+	![10-4625-events.png](Images/10-4625-events.png)
+	![10-4625-events-2.png](Images/10-4625-events-2.png)
 	
 ```kql
 SecurityEvent
@@ -71,7 +70,7 @@ SecurityEvent
 | order by TimeGenerated desc
 ```
 
-___
+
 
 # Writing a Scheduled Analytics Rule for Brute-Force Detection in KQL
 
@@ -79,37 +78,33 @@ An analytics rule is, in short, comparable to a security camera for the SOC team
 
 This is one of the first steps in the detection phase for a SOC analyst, who will then investigate and determine whether the alert is a false positive.
 
-## Creating a Rule
+### Creating a Rule
 
 1. Navigate to **Microsoft Sentinel → Analytics → Create → Scheduled query rule**.
-2. Name the **Analytics rule** (`Brute Force – Multiple Failed Logons (4625)`).
-	![[sentinel-rule-edit-general.png]]
-	Figure 11 — General tab: rule name, description, and severity.
-3. Set the Severity level (`Medium`) → set the MITRE ATT&CK tactic (`Credential Access`).
-	![[sentinel-rule-edit-mitre-attack.png]]
-	Figure 12 — MITRE ATT&CK mapping: Credential Access → Brute Force (T1110).
-4. Click `Next: Set rule logic` → add the custom query.
-	![[sentinel-4625-password-spray-query.png]]
-	Figure 13 — The 4625 detection query validated in the Logs blade before deployment.
-	![[sentinel-rule-wizard-query-scheduling.png]]
-	Figure 14 — Query scheduling: run every 5 minutes, 1-hour lookback.
-5. Specify the Entity mapping.
+2. Name the **Analytics rule** (`Brute Force – Multiple Failed Logons (4625)`)
+   ![sentinel-rule-edit-general.png](Images/sentinel-rule-edit-general.png)
+
+4. Set the Severity level (`Medium`) → set the MITRE ATT&CK tactic (`Credential Access`)
+   ![sentinel-rule-edit-mitre-attack.png](Images/sentinel-rule-edit-mitre-attack.png)
+
+6. Click `Next: Set rule logic` → add the custom query.
+   ![sentinel-4625-password-spray-query.png](Images/sentinel-4625-password-spray-query.png])
+   ![sentinel-rule-wizard-query-scheduling.png](Images/sentinel-rule-wizard-query-scheduling.png)
+
+8. Specify the Entity mapping.
 	- Account: `Name = TargetedAccounts`
 		- Gives Sentinel additional context for the alert, correlating real-world entities such as users and IP addresses.
-	![[sentinel-rule-edit-entity-mapping.png]]
-	Figure 15 — Entity mapping: Account → TargetedAccounts.
-6. Verify "Create incidents from alerts triggered by this analytics rule" is enabled in the **Incident settings**.
-	![[sentinel-rule-edit-incident-settings.png]]
-	Figure 16 — Incident creation enabled for the rule.
-	![[sentinel-rule-wizard-automated-response.png]]
-	Figure 17 — Automated response step (no automation rules configured).
-7. Click **Review & Create**.
-	![[sentinel-rule-wizard-review-create.png]]
-	Figure 18 — Review + create: validation passed for the password-spraying rule.
+	![sentinel-rule-edit-entity-mapping.png](Images/sentinel-rule-edit-entity-mapping.png)
+
+9. Verify "Create incidents from alerts triggered by this analytics rule" is enabled in the **Incident settings**.
+    ![sentinel-rule-edit-incident-settings.png](Images/sentinel-rule-edit-incident-settings.png)
+	![sentinel-rule-wizard-automated-response.png](Images/sentinel-rule-wizard-automated-response.png)
+
+11. Click **Review & Create**.
+    ![sentinel-rule-wizard-review-create.png](Images/sentinel-rule-wizard-review-create.png)
 
 The rule is now live in the Analytics **Active rules** list, alongside the SPN Honeypot and Kerberoasting rules:
-![[sentinel-analytics-3-rules-dup.png]]
-Figure 19 — The password-spraying rule enabled in the Active rules list.
+![sentinel-analytics-3-rules-dup.png](Images/sentinel-analytics-3-rules-dup.png)
 
 ## Scheduled Analytics Rule → Incident
 
@@ -155,8 +150,7 @@ SecurityEvent
 
 **Attack VM POV — credential guessing against `Yuji.Itadori`:**
 	
-![[nxc-password-guessing-yuji.png]]
-Figure 20 — NetExec trying a 12-password list against `Yuji.Itadori`; every attempt returns `STATUS_LOGON_FAILURE`, generating a burst of 4625s from 192.168.100.50.
+![nxc-password-guessing-yuji.png](Images/nxc-password-guessing-yuji.png)
 	
 ```bash
 nxc smb 192.168.100.10 -u Yuji.Itadori -p password.list -d zeroDae.local
@@ -164,21 +158,17 @@ nxc smb 192.168.100.10 -u Yuji.Itadori -p password.list -d zeroDae.local
 
 **Incident queue:** on the left-side menu of the control panel you'll find the Incidents tab, where any incidents that have occurred are generated.
 - Each created rule generates an incident when all its conditions are met.
-![[incident-list-password-spraying.png]]
-Figure 21 — Two `ActiveDirectory - Password Spraying Attempt Detected` incidents (Medium · Credential Access), impacted asset `Yuji.Itadori`.
+![incident-list-password-spraying.png](Images/incident-list-password-spraying.png)
 
 **Attack story / entity graph:** the attack story is a visual, node-based map that displays the full spread and chronology of the attack. Since the only thing targeted was one valid user and the attack failed (no password hits), there is no other data indicating the attacker gained credentials or laterally moved.
 	
-![[incident-3-attack-story.png]]
-Figure 22 — Incident 3 attack story: the `Yuji.Itadori` entity, impacted assets, and the correlated alert.
+![incident-3-attack-story.png](Images/incident-3-attack-story.png)
 
 **Evidence — alert query results:**
-![[incident-3-query-results.png]]
-Figure 23 — The alert's query results: **434 failed attempts** from 192.168.100.50 against `Yuji.Itadori`, with the StartTime → EndTime attack window.
+![incident-3-query-results.png](Images/incident-3-query-results.png)
 
 **Activity log — automatic correlation:**
-![[incident-3-activity-correlation.png]]
-Figure 24 — Microsoft Defender XDR automatically correlated the alert into incident 3.
+![incident-3-activity-correlation.png](Images/incident-3-activity-correlation.png)
 
 ## Skills Demonstrated
 
