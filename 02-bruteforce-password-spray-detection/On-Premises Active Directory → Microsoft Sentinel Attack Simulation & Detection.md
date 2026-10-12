@@ -10,7 +10,7 @@ tags:
 ---
 ## Objective 
 
-Build a hybrid SOC detection pipeline that streams Windows Security telemetry from an on-premises Active Directory [[Domain Controller]] into Microsoft Sentinel, then simulate a real credential attack from an attacker host and detect it with a custom KQL analytics rule that raises a MITRE-mapped incident.
+Build a hybrid SOC detection pipeline that streams Windows Security telemetry from an on-premises Active Directory Domain Controller into Microsoft Sentinel, then simulate a real credential attack from an attacker host and detect it with a custom KQL analytics rule that raises a MITRE-mapped incident.
 
 The value of this build is that the domain controller stays **on-premises** and is projected into the cloud SIEM via Azure Arc — a hybrid pattern that mirrors how most real enterprises actually monitor legacy infrastructure, rather than running everything natively in Azure.
 
