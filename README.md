@@ -27,12 +27,12 @@ A single hybrid pipeline underlies every project: the domain controller stays on
 ## Projects 
 
 
-| Project | Technique | MITRE ATT&CK |  Status    |
-| ------- | --------- | ------------ | ---------- |
-| On-Prem AD → Sentinel Pipeline  | Hybrid log ingestion (Arc + AMA + DCR)  |  |  ✅ |
-| Brute-Force / Password-Spray Detection | Password spraying | T1110 (.001, and .003) | ✅ |
-| Kerberoasting: Attack, Detection & Cracking | Kerberoasting | T1558.003 | ✅ |
-| RDP Lateral Movement Detection | Lateral Movement | T1021.001 (RDP) · T1078 (Valid Accounts) | ✅ |
+| Project | Technique | MITRE ATT&CK |  
+| ------- | --------- | ------------ | 
+| On-Prem AD → Sentinel Pipeline  | Hybrid log ingestion (Arc + AMA + DCR)  |  | 
+| Brute-Force / Password-Spray Detection | Password spraying | T1110 (.001, and .003) |
+| Kerberoasting: Attack, Detection & Cracking | Kerberoasting | T1558.003 |
+| RDP Lateral Movement Detection | Lateral Movement | T1021.001 (RDP) · T1078 (Valid Accounts) |
 
 
 Each project folder contains its own writeup, KQL, and screenshots.
@@ -45,11 +45,11 @@ Each project folder contains its own writeup, KQL, and screenshots.
 * Framework: MITRE ATT&CK
 
 ## What This Lab Demonstrates
-* Hybrid cloud detection — projecting on-prem AD into a cloud SIEM (not a cloud-native shortcut)
-* Detection engineering — writing, parsing, and tuning KQL analytics rules with entity mapping
-* Attack simulation — running real credential attacks against a live domain controller
-* MITRE ATT&CK coverage — every detection classified to a technique
-* The full loop — attack → telemetry → detection → incident → (impact)
+* Hybrid cloud detection: projecting on-prem AD into a cloud SIEM (not a cloud-native shortcut)
+* Detection engineering: writing, parsing, and tuning KQL analytics rules with entity mapping
+* Attack simulation: running real credential attacks against a live domain controller
+* MITRE ATT&CK coverage every detection classified to a technique
+* The full loop: attack → telemetry → detection → incident → (impact)
 
 ## Related Writeups
 
