@@ -39,13 +39,13 @@ Microsoft Sentinel — KQL analytics rule → Incident
 
 Password spraying and password guessing are cousins that fall under the same MITRE ATT&CK mapping of Credential Access → T1110 (Brute Force).
 
-**Password spraying** (one password × many users) works by attempting a single password against a large set of valid user accounts. The attacker keeps the attempts per account below the lockout threshold — three in this environment. That number varies with the organization's password policy; this method helps avoid locking accounts and drawing attention. Because the attack touches many accounts at once, every targeted account should be **reviewed** and **secured** immediately.
+**Password spraying** (one password × many users) works by attempting a single password against a large set of valid user accounts. The attacker keeps the attempts per account below the lockout threshold. three in this environment. That number varies with the organization's password policy; this method helps avoid locking accounts and drawing attention. Because the attack touches many accounts at once, every targeted account should be **reviewed** and **secured** immediately.
 
 **Password guessing** (one user × many passwords) is closer to a traditional brute-force approach, which makes it loud and easy to spot. It usually means a single enterprise account is being targeted directly, and that account should be quarantined until the activity is investigated.
 
 ### Password Spraying - T1110.003
 
-I created six disposable domain accounts as targets, then ran a **password spray** with NetExec — one incorrect password tried against all six accounts. Spraying (one password × many users) generates a burst of failed logons from a single source without exceeding the 3-attempt account-lockout threshold on any individual account.
+I created six disposable domain accounts as targets, then i executed a **password spray** with NetExec with one incorrect password tried against all six accounts. The spraying (one password × many users) generates a burst of failed logons from a single source without exceeding the 3-attempt account-lockout threshold on any individual account.
 	![13-nxc-spray.png](Images/13-nxc-spray.png)
 	
 ```bash
